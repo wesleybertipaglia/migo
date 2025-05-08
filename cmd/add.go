@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"migo/db"
+	"migo/validations"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -24,12 +24,7 @@ var AddCmd = &cobra.Command{
 			return
 		}
 
-		migrationsPath := filepath.Join(rootDir, "migrations")
-		if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-			fmt.Println("❌ Invalid directory: migo folder not found.")
-			return
-		}
-
+		validations.ValidateDirectory(rootDir)
 		timestamp := time.Now().Format("20060102150405")
 		fileName := fmt.Sprintf("%s/migrations/%s_%s.sql", rootDir, timestamp, migrationName)
 
@@ -45,10 +40,19 @@ var AddCmd = &cobra.Command{
 		}
 
 		db.Init(rootDir)
-		_, err = db.DB.Exec("INSERT INTO migrations_pending (timestamp, name, created_at) VALUES (?, ?, ?)",
+		defer db.DB.Close()
+
+		tx, err := db.DB.Begin()
+		if err != nil {
+			log.Fatalf("❌ Failed to begin transaction: %v", err)
+		}
+		defer tx.Commit()
+
+		_, err = tx.Exec("INSERT INTO migrations_pending (timestamp, name, created_at) VALUES (?, ?, ?)",
 			timestamp, migrationName, time.Now().Format(time.RFC3339))
 		if err != nil {
-			log.Fatal(err)
+			tx.Rollback()
+			log.Fatalf("❌ Failed to insert new migration into pending migrations: %v", err)
 		}
 
 		fmt.Printf("✅ Migration '%s' created at: %s\n", migrationName, fileName)
