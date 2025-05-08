@@ -1,0 +1,54 @@
+name: Build Migo
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build with latest Go
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🧰 Set up Go (latest stable)
+        uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+
+      - name: 📦 Install dependencies
+        run: go mod download      
+
+      - name: ✅ Run tests
+        run: |
+          if ls *_test.go >/dev/null 2>&1; then
+            go test ./...
+          else
+            echo "No tests found."
+          fi
+
+      - name: 🛠️ Build binary
+        run: |
+          mkdir -p dist
+          go build -o dist/migo ./cmd/migo
+
+      - name: 📦 Package (tar.gz)
+        run: |
+          cd dist
+          tar -czvf migo-linux-amd64.tar.gz migo
+
+      - name: 🚀 Publish to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          files: dist/migo-linux-amd64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧹 Run linter
+        run: go install golang.org/x/lint/golint@latest

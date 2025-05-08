@@ -8,6 +8,7 @@ Migo is a lightweight, fast, and easy-to-use migration tool designed to make you
 * [Features](#features)
 * [Getting Started](#getting-started)
 * [Usage](#usage)
+* [Commands](#commands)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -25,11 +26,18 @@ Migo was created to make database migrations simple and efficient. Whether you'r
 
 ## Features ✨
 
-* **Organized Migrations:** Create migration files with timestamped names to keep everything tidy.
-* **Apply Pending Migrations:** Automatically apply all pending migrations with a single command.
-* **Rollback with Ease:** Roll back the last applied migration (don’t worry, it’s like taking a step back after a little mistake!).
-* **SQLite Integration:** Track applied and pending migrations using SQLite (for a cozy and consistent experience).
-* **What's Next:** Support for more databases and multiple rollbacks coming soon!
+- [x] Initialize Project
+- [x] Create Migration
+- [x] Apply Migrations
+- [x] Rollback Last Migration
+- [x] List Migrations
+- [x] Prebuilt Binary for Easy Installation
+- [x] Build from Source
+- [x] Makefile for Common Tasks
+- [x] Add CI/CD integration for automated builds and releases
+- [ ] Create easy installer for multiple platforms (Windows, Linux, macOS)
+- [ ] Add support for multiple databases (PostgreSQL, MySQL, SQLite, etc.)
+- [ ] Add support for custom migration templates
 
 ## Getting Started 🚀
 
@@ -114,7 +122,7 @@ migo init --project ./backend
 Adding a new migration? Migo makes it a snap:
 
 ```bash
-migo add --name=create_users_table
+migo add --name create_users_table
 ```
 
 This will create a migration file like:
@@ -149,6 +157,16 @@ Made a mistake? No worries, just roll back the last migration:
 ```bash
 migo rollback
 ```
+
+## Commands ⚡
+
+Here are the available commands in Migo:
+
+* **`migo init`**: Initializes the migration project with the necessary folder structure.
+* **`migo add --name <migration_name>`**: Creates a new migration file with the specified name. The name is appended to the timestamp to ensure a unique file.
+* **`migo update`**: Applies all pending migrations to the database.
+* **`migo rollback`**: Rolls back the last applied migration.
+* **`migo list`**: Lists all migrations along with their status (either "Applied" or "Pending").
 
 ### Makefile Commands 🛠️
 
