@@ -1,4 +1,4 @@
-name: Build Migo
+name: 🐈‍⬛ Build Migo
 
 on:
   push:
@@ -9,47 +9,47 @@ on:
 
 jobs:
   build:
-    if: startsWith(github.ref, 'refs/tags/v') && github.ref_name == 'main'
-    name: Build with latest Go
+    name: 🏗️ Build and Release
     runs-on: ubuntu-latest
+    container:
+      image: golang:1.22-alpine
 
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      - name: 🧰 Set up Go (latest stable)
-        uses: actions/setup-go@v4
-        with:
-          go-version: 'stable'
+      - name: 🔍 Check if tag points to main
+        run: |
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref_name }})
+          MAIN_COMMIT=$(git rev-parse origin/main)
 
-      - name: 📦 Install dependencies
-        run: go mod download      
+          echo "🔖 Tag commit:  $TAG_COMMIT"
+          echo "🌳 Main commit: $MAIN_COMMIT"
+
+          if [ "$TAG_COMMIT" != "$MAIN_COMMIT" ]; then
+            echo "❌ Tag '${{ github.ref_name }}' does not point to the latest commit on 'main'. Skipping build."
+            exit 1
+          fi
+
+      - name: ⚡ Install dependencies
+        run: go mod download
 
       - name: ✅ Run tests
-        run: |
-          if ls *_test.go >/dev/null 2>&1; then
-            go test ./...
-          else
-            echo "No tests found."
-          fi
+        run: go test ./...
 
       - name: 🛠️ Build binary
         run: |
           mkdir -p dist
           go build -o dist/migo .
 
-      - name: 📦 Package (tar.gz)
+      - name: 📦 Package binary
         run: |
           cd dist
           tar -czvf migo-linux-amd64.tar.gz migo
 
-      - name: 🚀 Publish to GitHub Releases
+      - name: 🎉 Publish to GitHub Releases
         uses: softprops/action-gh-release@v1
         with:
-          name: Release ${{ github.ref_name }}
           files: dist/migo-linux-amd64.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🧹 Run linter
-        run: go install golang.org/x/lint/golint@latest
