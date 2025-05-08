@@ -17,6 +17,8 @@ func main() {
 
 	rootCmd.AddCommand(cmd.InitCmd)
 	rootCmd.AddCommand(cmd.AddCmd)
+	rootCmd.AddCommand(cmd.UpdateCmd)
+	rootCmd.AddCommand(cmd.RollbackCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
