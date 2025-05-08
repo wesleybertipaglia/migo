@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"migo/db"
+	"migo/validations"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,18 +28,23 @@ var UpdateCmd = &cobra.Command{
 			return
 		}
 
+		validations.ValidateDirectory(rootDir)
 		migrationsPath := filepath.Join(rootDir, "migrations")
-		if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-			fmt.Println("❌ Invalid directory: migo folder not found.")
-			return
-		}
 
 		db.Init(rootDir)
+		defer db.DB.Close()
 
 		mutex.Lock()
 		defer mutex.Unlock()
 
-		rows, err := db.DB.Query("SELECT timestamp, name FROM migrations_pending ORDER BY timestamp")
+		tx, err := db.DB.Begin()
+		if err != nil {
+			log.Fatalf("❌ Failed to begin transaction: %v", err)
+		}
+
+		defer tx.Commit()
+
+		rows, err := tx.Query("SELECT timestamp, name FROM migrations_pending ORDER BY timestamp")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -58,17 +64,21 @@ var UpdateCmd = &cobra.Command{
 
 			if upSQL != "" {
 				fmt.Printf("🚀 Applying migration: %s\n", name)
-				if _, err := db.DB.Exec(upSQL); err != nil {
+				if _, err := tx.Exec(upSQL); err != nil {
+					tx.Rollback()
 					log.Fatalf("❌ Failed to apply migration %s: %v", name, err)
 				}
 
-				_, err = db.DB.Exec("DELETE FROM migrations_pending WHERE timestamp = ?", timestamp)
+				_, err = tx.Exec("DELETE FROM migrations_pending WHERE timestamp = ?", timestamp)
 				if err != nil {
+					tx.Rollback()
 					log.Fatal(err)
 				}
-				_, err = db.DB.Exec("INSERT INTO migrations_applied (timestamp, name, applied_at) VALUES (?, ?, ?)",
+
+				_, err = tx.Exec("INSERT INTO migrations_applied (timestamp, name, applied_at) VALUES (?, ?, ?)",
 					timestamp, name, time.Now().Format(time.RFC3339))
 				if err != nil {
+					tx.Rollback()
 					log.Fatal(err)
 				}
 
