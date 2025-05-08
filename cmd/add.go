@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"migo/db"
+	"migo/validations"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -24,26 +24,7 @@ var AddCmd = &cobra.Command{
 			return
 		}
 
-		migrationsPath := filepath.Join(rootDir, "migrations")
-		if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-			fmt.Println("❌ Invalid directory: migo folder not found.")
-			return
-		}
-
-		statePath := filepath.Join(rootDir, "state")
-		if _, err := os.Stat(statePath); os.IsNotExist(err) {
-			if err := os.MkdirAll(statePath, os.ModePerm); err != nil {
-				log.Fatalf("❌ Failed to create state directory: %v", err)
-			}
-		}
-
-		logsPath := filepath.Join(rootDir, "logs")
-		if _, err := os.Stat(logsPath); os.IsNotExist(err) {
-			if err := os.MkdirAll(logsPath, os.ModePerm); err != nil {
-				log.Fatalf("❌ Failed to create logs directory: %v", err)
-			}
-		}
-
+		validations.ValidateDirectory(rootDir)
 		timestamp := time.Now().Format("20060102150405")
 		fileName := fmt.Sprintf("%s/migrations/%s_%s.sql", rootDir, timestamp, migrationName)
 
