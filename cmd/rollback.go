@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"migo/db"
+	"migo/validations"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,14 +20,18 @@ var RollbackCmd = &cobra.Command{
 		var rootDir string = "./migo"
 
 		migrationsPath := filepath.Join(rootDir, "migrations")
-		if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-			fmt.Println("❌ Invalid directory: migo folder not found.")
-			return
-		}
+		validations.ValidateDirectory(rootDir)
 
 		db.Init(rootDir)
+		defer db.DB.Close()
 
-		row := db.DB.QueryRow("SELECT timestamp, name FROM migrations_applied ORDER BY id DESC LIMIT 1")
+		tx, err := db.DB.Begin()
+		if err != nil {
+			log.Fatalf("❌ Failed to begin transaction: %v", err)
+		}
+		defer tx.Commit()
+
+		row := tx.QueryRow("SELECT timestamp, name FROM migrations_applied ORDER BY id DESC LIMIT 1")
 		var timestamp, name string
 		if err := row.Scan(&timestamp, &name); err != nil {
 			fmt.Println("⚠️ No migrations to rollback.")
@@ -45,17 +50,20 @@ var RollbackCmd = &cobra.Command{
 		}
 
 		fmt.Printf("⏪ Rolling back migration: %s\n", name)
-		if _, err := db.DB.Exec(downSQL); err != nil {
+		if _, err := tx.Exec(downSQL); err != nil {
+			tx.Rollback()
 			log.Fatalf("❌ Failed to rollback migration: %v", err)
 		}
 
-		_, err = db.DB.Exec("DELETE FROM migrations_applied WHERE timestamp = ?", timestamp)
+		_, err = tx.Exec("DELETE FROM migrations_applied WHERE timestamp = ?", timestamp)
 		if err != nil {
+			tx.Rollback()
 			log.Fatal(err)
 		}
 
-		_, err = db.DB.Exec("INSERT INTO migrations_pending (timestamp, name, created_at) VALUES (?, ?, datetime('now'))", timestamp, name)
+		_, err = tx.Exec("INSERT INTO migrations_pending (timestamp, name, created_at) VALUES (?, ?, datetime('now'))", timestamp, name)
 		if err != nil {
+			tx.Rollback()
 			log.Fatal(err)
 		}
 
