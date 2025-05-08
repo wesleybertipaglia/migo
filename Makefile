@@ -7,6 +7,11 @@ build:
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) main.go
 	@echo "Build complete. Executable is located at $(BUILD_DIR)/$(BINARY_NAME)"
 
+install: build
+	@echo "Installing $(BINARY_NAME)..."
+	sudo cp -r $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
+	@echo "$(BINARY_NAME) installed successfully."
+
 clean:
 	@echo "Cleaning up..."
 	rm -rf $(BUILD_DIR)
