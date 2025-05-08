@@ -11,13 +11,18 @@ import (
 var DB *sql.DB
 
 func Init(dir string) {
-	var err error
 	dbPath := filepath.Join(dir, "state", "migo.db")
 
-	DB, err = sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	if _, err := db.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		log.Fatal(err)
+	}
+
+	DB = db
 
 	createTables := `
 	CREATE TABLE IF NOT EXISTS migrations_applied (
