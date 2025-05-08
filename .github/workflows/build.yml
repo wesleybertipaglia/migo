@@ -12,7 +12,7 @@ jobs:
     name: 🏗️ Build and Release
     runs-on: ubuntu-latest
     container:
-      image: golang:1.22-alpine
+      image: golang:alpine
 
     steps:
       - name: 📥 Checkout code
